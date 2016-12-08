@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.link {
+  stroke: #ccc;
+}
+/*.node.selected circle{
+	fill: blue
+}*/
+.node text {
+  pointer-events: none;
+  font: 10px 'open sans';
+}
+table, th, td {
+    border: 1px solid #ccc;
+    border-collapse: collapse;
+}
+th,td {
+    padding: 5px;
+	font: 12px 'open sans';
+	text-align: center;
+}
+svg {
+	border: 1px solid #DEDEDE;
+	font: 14px 'open sans';
+}
+
+body{
+	text-align: center;
+	font-family: 'Open Sans', sans-serif;
+	
+}
+.viz{
+	text-align: center;
+	margin-top: 4em;
+}
+select{
+	font-family: 'Open Sans', sans-serif;
+	position:absolute;
+	float:right;
+	z-index: 1;
+	width: 15em;
+}
+</style>
+
+<body>
+<div class="viz">
+<select multiple size=13></select> 
+<link rel="stylesheet" type="text/css"
+      href="https://fonts.googleapis.com/css?family=Open+Sans:400,600">
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+var width = 1200,
+    height = 800
+
+var svg = d3.select(".viz").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+// target radius of the circle
+var targetradius = 225;
+
+var force = d3.layout.force()
+	// tweak these for visuals
+    .gravity(0)
+	.linkStrength(.7)
+	.linkDistance(function(d){
+		if (d.edgetype=='disease'){return 100}
+		else if (d.edgetype=='disease_T1D'){return 170}
+		else {return 20}})
+	.charge(function(d) {
+		// high repulsion to get outer node layer out of the circle
+		if (d.name=='Diabetes Mellitus, Type 1'){return -10000}
+		else if (d.nodetype == 'region'){return -300}
+		else if (d.nodetype == 'disease'){return -500}
+		else {return -50}})
+    .size([width, height]);
+
+var keywords;
+d3.json("data/keywords.json",function(data){keywords=data;});
+
+var regioninfo;
+d3.json("data/regioninfo.json",function(data){regioninfo=data;});
+
+d3.json("data/forcegraphdata.json", function(error, json) {
+  	force
+      	.nodes(json.nodes)
+		.links(json.edges);
+      
+	var logscale = d3.scale.log().clamp([true])
+		.domain([1e-50,1e-08,1e-06])	// input domain
+		.range([100,8,6]);
+	
+	var expscale = d3.scale.pow().exponent(.25).clamp([true])
+		.domain([100,8,6])
+		.range([15,7,4]);	// output size
+	
+	var edgewidth = d3.scale.linear()
+    	.domain([1, 5])
+    	.range([1, 5*4]);
+	
+	var link = svg.selectAll(".link")
+		.data(json.edges)
+		.enter().append("line")
+		.attr("class", "link")
+		.style("stroke-width", function(d) { return edgewidth(d.oddsratio); });
+	
+	var node_drag = d3.behavior.drag()
+    	.on("dragstart", dragstart)
+    	.on("drag", dragmove)
+    	.on("dragend", dragend);
+
+	function dragstart(d, i) {
+    	force.stop() 
+	}
+
+	function dragmove(d, i) {
+		d.px += d3.event.dx;
+		d.py += d3.event.dy;
+		d.x += d3.event.dx;
+		d.y += d3.event.dy; 
+		tick(); 
+	}
+
+	function dragend(d, i) {
+		d.fixed = true;
+		tick();
+		force.resume();
+	}
+
+	var node = svg.selectAll(".node")
+		.data(json.nodes)
+		.enter().append("g")
+		.attr("class", "node")
+		.call(force.drag)
+		;
+	
+	//subsets of nodes/edges
+	var node_region = node.filter(function(d){return d.nodetype=='region'});
+	var node_disease_nonT1D = node.filter(function(d){return d.nodetype=='disease'})
+		.filter(function(d){return d.name!='Diabetes Mellitus, Type 1'});
+	var node_T1D = node.filter(function(d){return d.name=='Diabetes Mellitus, Type 1'});
+	
+	var link_disease_nonT1D = link.filter(function(d){return d.edgetype=='disease'})
+	var link_disease_T1D = link.filter(function(d){return d.edgetype=='disease_T1D'})
+	
+	// set initial position of center node, and set as fixed
+	node.each(function(d){
+		if (d.name=="Diabetes Mellitus, Type 1"){	
+			d.x = width*3/5;
+			d.y = height/2;
+			d.fixed=true;
+		}
+	});
+	
+	force.start();
+
+	node.append("circle")
+		.attr("r", function(d){
+			if (d.nodetype=='region'){return expscale(logscale(d.pval))}
+			else {return 5}
+			})
+		.style("stroke","white")
+		.style("stroke-width",2)
+		.style("opacity", 0.7)
+		.style("fill", function(d) {
+			if (d.nodetype=='region'){
+				if (d.CCstrength=='strong'){return "green"}
+				else if (d.CCstrength=='weak'){return "lightsteelblue"}
+				else {return "gold"}
+				}
+			else if (d.name=='Diabetes Mellitus, Type 1'){return "black"}
+			else {return "black"}
+			});
+		
+    
+	node.append("text")
+		.attr("dx", 12)
+		.attr("dy", ".35em")
+		.text(function(d) {if (d.CCstrength=='strong'){return d.CC}
+                           else{return d.name}});
+	
+	// actions on click
+	node_region.on("click", regionnode_onclick);
+	function regionnode_onclick(d) {
+		// reset bold text on other nodes
+		node.select("text").style("font-weight","normal");
+		// bold node label
+		d3.select(this).select("text").style("font-weight","bold");
+		
+		// populate data table
+		var info = regioninfo[d.regionID];
+		d3.select("table").select("regionband").text(info.regionband);
+		d3.select("table").select("coordinates").text(info.coordinates);
+		d3.select("table").select("diseases").text(info.diseases);
+		d3.select("table").select("SNP").text(info.SNP);
+		d3.select("table").select("pval").text(info.pval);
+		d3.select("table").select("oddsratio").text(info.oddsratio);
+		d3.select("table").select("MAF").text(info.MAF);
+		d3.select("table").select("SNPtype").text(info.SNPtype);
+		d3.select("table").select("genes").text(info.genes);
+		d3.select("table").select("causalcandidate").text(info.causalcandidate);
+		d3.select("table").select("reference").text(info.reference);
+		d3.select("table").select("IBlink1")
+			.html('<a href=http://www.immunobase.org/page/Regions/display/species/human/disease/T1D/type/assoc#region_'+info.regionID+' target="_blank"\>Region table</a>');
+		d3.select("table").select("IBlink2")
+			.html('<a href=http://www.immunobase.org/page/Overview/display/locus/Hs-T1D-ASR-'+info.regionID2+' target="_blank"\>Genome browser view and publication info</a>');
+	}
+	
+		
+	// button to toggle disease nodes visibility on/off
+	var button_hide = svg.append("rect")
+	button_hide
+		.attr("x",10)
+		.attr("y",height-100)
+		.attr("width",30)
+		.attr("height",30)
+		.style("fill","grey")
+		.attr("clicked",0);
+		svg.append("text")
+			.attr("x",50)
+			.attr("y",height-80)
+		.text("disease nodes on/off");
+	button_hide.on("click",function(){
+		node_disease_nonT1D.style("opacity", button_hide.attr("clicked"));
+		link_disease_nonT1D.style("opacity", button_hide.attr("clicked"));
+		button_hide.attr("clicked",Math.abs(1-button_hide.attr("clicked")));
+	});
+	
+	// menu for selecting keywords
+	var menu = d3.select("body").select("select");
+	menu.selectAll("option")
+		.data(Object.keys(keywords))
+		.enter()
+		.append("option")
+		.attr("value", function(d,i){
+			return d;
+		})
+		.text(function(d,i){
+			return d;
+		});
+	
+	// function to select nodes with a certain condition
+	function selectnodes(nodelist){
+		return node
+			// first filter for snp nodes
+			.filter(function(d){return d.nodetype == 'region'})
+			// then filter for selected condition
+			.filter(function(d){
+				return nodelist.indexOf(d.regionID)>-1;
+			})
+	}
+	
+	// function to call on menu change
+	function conditioncolor(){
+		node.filter(function(d){return d.nodetype=='region'})
+			.selectAll("circle").style("stroke","white").style("stroke-width",2);
+			// go through each option in menu and color nodes
+			menu.selectAll("option").filter(function(d){return this.selected})
+				.each(function(d){
+					selectnodes(keywords[d3.select(this).attr("value")])
+						.selectAll("circle").style("stroke","#d62728").style("stroke-width",4);
+			});
+	}
+	
+	menu.on("change",conditioncolor);
+    
+    // draw legend
+    svg.append("circle")
+        .attr("cx","25")
+        .attr("cy", height-200)
+        .attr("r","10")
+        .style("fill","green");
+        svg.append("text")
+            .attr("x", "45")
+            .attr("y", height-195)
+            .text("Causal candidate strong");
+    svg.append("circle")
+        .attr("cx","25")
+        .attr("cy", height-175)
+        .attr("r","10")
+        .style("fill","lightsteelblue");
+        svg.append("text")
+            .attr("x", "45")
+            .attr("y", height-170)
+            .text("Causal candidate weak");
+
+    svg.append("circle")
+        .attr("cx","25")
+        .attr("cy", height-150)
+        .attr("r","10")
+        .style("fill","gold");
+        svg.append("text")
+            .attr("x", "45")
+            .attr("y", height-145)
+            .text("No causal candidate");
+    svg.append("circle")
+        .attr("cx","25")
+        .attr("cy", height-125)
+        .attr("r","5")
+        .style("fill","black");
+        svg.append("text")
+            .attr("x", "45")
+            .attr("y", height-120)
+            .text("Associated disease");
+	
+	
+	// Updating positions on tick - constrain nodes to circle
+
+	// window edge buffer distance
+	var buffer = 10
+
+	// computes cartesian distance between nodes given coordinates
+	function computedist(x1,x2,y1,y2){
+		return Math.sqrt(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));
+	}
+
+	function update_xpos(d) {
+		return d.x = Math.max(buffer, Math.min(width - buffer, d.x)); 
+	}
+	force.on("tick",tick);
+
+	// optional control using odds ratio
+	function adjradius(odds) {
+		weight = 0.8
+		return targetradius/(1+(odds-1)*weight)
+	}
+	
+	function tick() {
+		link_disease_T1D.each(function(d){
+			var currentdist = computedist(d.source.x,d.target.x,d.source.y,d.target.y)
+			// get target coordinate on the target circle
+			var theta = Math.atan2(d.source.y-d.target.y,d.source.x-d.target.x)
+			var xcircle = d.target.x + targetradius*Math.cos(theta)
+			var ycircle = d.target.y + targetradius*Math.sin(theta)
+			// move node closer to target on circle
+			d.source.x = (9*d.source.x+1*xcircle)/10;
+			d.source.y = (9*d.source.y+1*ycircle)/10;
+			
+		});
+		link.attr("x1", function(d) { return d.source.x; })
+			.attr("y1", function(d) { return d.source.y; })
+			.attr("x2", function(d) { return d.target.x; })
+			.attr("y2", function(d) { return d.target.y; });
+
+		node
+			.attr("cx", function(d) { return d.x = Math.max(buffer, Math.min(width - buffer, d.x));})
+        	.attr("cy", function(d) { return d.y = Math.max(buffer, Math.min(height - buffer, d.y)); });
+    	node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+		
+  	}
+});
+</script>
+</div>
+
+<!-- Datatable to display selected node information-->
+<p>Region Information</p>
+<table style="table-layout:fixed;
+			  width:750px;
+			  border: 2px solid black;"
+	   align="center">
+	<tr><th>Region</th><td><regionband></regionband></td></tr>
+	<tr><th>Coordinates</th><td><coordinates></coordinates></td></tr>
+	<tr><th>Region-associated Diseases</th><td><diseases></diseases></td></tr>
+	<tr><th>SNP</th><td><SNP></SNP></td></tr>
+	<tr><th>P Value</th><td><pval></pval></td></tr>
+	<tr><th>Odds Ratio</th><td><oddsratio></oddsratio></td></tr>
+	<tr><th>Minor Allele Frequency</th><td><MAF></MAF></td></tr>
+	<tr><th>SNP Type</th><td><SNPtype></SNPtype></td></tr>
+	<tr><th>Genes</th><td><genes></genes></td></tr>
+	<tr><th>Causal Candidates</th><td><causalcandidate></causalcandidate></td></tr>
+	<tr><th>References for Candidate Assignment</th><td><reference></reference></td></tr>
+	<tr><th>View T1D regions in Immunobase</th><td><IBlink1></IBlink1></td></tr>
+	<tr><th>View region page in Immunobase</th><td><IBlink2></IBlink2></td></tr>
+</table> 
+
+
+</body>

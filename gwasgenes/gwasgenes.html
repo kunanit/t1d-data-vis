@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+	font-family: "Open Sans", sans-serif;
+  margin: auto;
+  position: relative;
+  width: 960px;
+}
+
+#mode {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+.option {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+}
+#display {
+    position: absolute;
+	margin: 0 auto;
+    left: 0; right: 0;
+    top: 320px;
+	text-align: center;
+}
+#search{
+    text-align: center;
+}
+</style>
+
+<link rel="stylesheet" type="text/css"
+      href="https://fonts.googleapis.com/css?family=Open+Sans:400,600">
+
+<body>
+
+<!-- space to display labels on hover -->
+<span id='display'></span>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+
+<script>
+var width = 960,
+    height = 700,
+    radius = Math.min(width, height) / 2.2,
+    color = d3.scale.category20c();
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .append("g")
+    .attr("transform", "translate(" + width / 2 + "," + height * .52 + ")");
+
+// uses d3 partition layout
+var partition = d3.layout.partition()
+    .sort(null)
+    .size([2 * Math.PI, radius * radius])
+    .value(function(d) { return 1; });
+
+var arc = d3.svg.arc()
+    .startAngle(function(d) { return d.x; })
+    .endAngle(function(d) { return d.x + d.dx; })
+    .innerRadius(function(d) { return Math.sqrt(d.y); })
+    .outerRadius(function(d) { return Math.sqrt(d.y + d.dy); });
+
+// load data from json
+d3.json("data/genedata.json", function(error, root) {
+  var path = svg.datum(root).selectAll("path")
+    .data(partition.nodes)
+    .enter().append("path")
+    .attr("display", function(d) { return d.depth ? null : "none"; }) 
+    .attr("d", arc)
+    .style("stroke", "#fff")
+    .style("fill", "#ccc")
+    .style("fill-rule", "evenodd")
+    ;
+
+var path_inner = path.filter(function(d){return d.depth==1})
+var path_outer = path.filter(function(d){return d.depth==2})
+
+// highlight regions and display label on hover
+// inner circle
+path_inner.on("mouseover", function(d){
+	d3.select(this).style("fill", "#888");
+    d3.select(this).classed("selected", true);
+	d3.select("#display").text(d.name);
+	path_outer.filter(function(c){return c.parent.regionid == d.regionid})
+        .classed("selected",true)
+        .each(function(){
+            var oldcolor = d3.select(this).style("fill")
+            var newcolor = d3.rgb(oldcolor).darker()
+            d3.select(this).style("fill",newcolor);
+    });
+});
+// outer circle
+path_outer.on("mouseover", function(d){
+	var oldcolor = d3.select(this).style("fill")
+    var newcolor = d3.rgb(oldcolor).darker()
+    d3.select(this).style("fill", newcolor);
+    d3.select(this).classed("selected", true);
+	d3.select("#display").text(d.name);
+});
+// reset coloring and display on mouseout
+path.on("mouseout", function(d){
+	d3.select("#display").text("");
+    
+    d3.selectAll(".selected").each(function(){        
+        var oldcolor = d3.select(this).style("fill")
+        var newcolor = d3.rgb(oldcolor).brighter()
+        d3.select(this).style("fill", newcolor);
+        });
+    d3.selectAll(".selected").classed("selected",false)
+
+});
+
+// control highlighting based on search value
+var searchform = d3.select("#searchform");
+searchform.on("change",function(){updatehighlighting(this.search.value)});
+
+function updatehighlighting(mysearch){
+    path_outer.style("fill","#ccc");
+    if (mysearch){
+    path_outer.filter(function(d){
+            var phenotype = d.phenotypelist;
+            return phenotype.search(mysearch.toLowerCase())>-1;})
+        .style("fill","#d62728");
+    }
+    return false;
+}    
+
+});
+
+    
+</script>
+    
+<div id="search">
+<form id="searchform" action="" method="GET" onsubmit="return false;" >
+	<input type="text" name="search" value="e.g. beta cell, immune" onClick="this.select();" />
+	<input type="submit" value="search" />
+</form>
+</div>
+</body>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
+
+    <title>T1D data visualizations</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- custom stylesheet -->
+    <link href="indexstyle.css" rel="stylesheet">
+
+
+  </head>
+
+  <body>
+
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">T1D data visualizations</a>
+        </div>
+        
+      </div>
+    </nav>
+
+    <div class="jumbotron">
+      <div class="container">
+        <p>Data visualizations for the Type 1 Diabetes Consortium (HSCI)</p>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-md-6">
+          <div>
+            <h2>Author publication networks</h2>
+            <p>Visualization of author networks in the T1D literature. Individual authors are represented by nodes in the diagram. Node size represents number of last author publications. Wider edge thickness represents more papers copublished between two authors. (Criteria for author inclusion = last author on one of the top 500 cited papers from Web of Science search [type 1 diabetes or diabetes mellitus type 1 or iddm or funding:jdrf]) </p>
+            <p><a class="btn btn-default" href="authornetwork/authornetwork_500topcited.html" role="button">View &raquo;</a></p>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div>
+            <img src='authornetwork/icon.PNG' width=100%>
+          </div>
+       </div>
+      </div>
+      <hr>
+      <div class="row">
+        <div class="col-md-6">
+          <div>
+            <h2>T1D and autoimmune associated GWAS hits</h2>
+            <p>Visualization of GWAS hits associated with T1D and other autoimmune diseases. Data from Immunobase. </p>
+            <p><a class="btn btn-default" href="gwashits/gwashits.html" role="button">View &raquo;</a></p>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div>
+            <img src='gwashits/icon.PNG' width=100%>
+          </div>
+       </div>
+      </div>
+
+      <hr>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div>
+            <h2>T1D and autoimmune associated GWAS hits</h2>
+            <p>Visualization of GWAS hits associated with T1D and other autoimmune diseases. Data from Immunobase. </p>
+            <p><a class="btn btn-default" href="gwasgenes/gwasgenes.html" role="button">View &raquo;</a></p>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div>
+            <img src='gwasgenes/icon.PNG' width=100%>
+          </div>
+       </div>
+      </div>
+
+      <hr>
+
+      <div class="row">
+        <div class="col-md-6">
+          <div>
+            <h2>Ideogram of T1D-associated regions and T2D-associated SNPs</h2>
+            <p>Ideogram showing chromosomal locations of T1D-associated regions (blue) and T2D-associated SNPs (red). T1D GWAS region data is from Immunobase and T2D GWAS hit data is from Genome.gov. Generated using Idiographica (Kin T and Ono Y, 2007). </p>
+            <p><a class="btn btn-default" href="ideogram/ideogram.png" role="button">View &raquo;</a></p>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div>
+            <img src='ideogram/icon.PNG' width=100%>
+          </div>
+       </div>
+      </div>
+      
+      <hr>
+
+      <footer>
+        <p>&copy; Andrew Ang 2015</p>
+      </footer>
+    </div>
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <!-- <script src="../../dist/js/bootstrap.min.js"></script> -->
+  </body>
+</html>
